@@ -1,3 +1,7 @@
+---@param  repo_name string
+---@param  token string
+---@param org string
+---@param workspace_path string
 local function fetch_github_repo(repo_name, token, org, workspace_path)
   local cmd = {
     "curl",
@@ -35,3 +39,7 @@ local function fetch_github_repo(repo_name, token, org, workspace_path)
   }
   return repo_info
 end
+
+return {
+  fetch_github_repo = fetch_github_repo,
+}
