@@ -42,28 +42,52 @@ local function fetch_github_repo(repo_name, token, org, workspace_path)
   return repo_info
 end
 
-
-local function get_repo_name()
+---@return string|nil org The organization name
+---@return string|nil repo The repository name
+local function get_repo_info()
   local handle = io.popen("git remote get-url origin 2>/dev/null")
   if not handle then
-    return nil
+    return nil, nil
   end
 
   local result = handle:read("*a")
   handle:close()
   if not result or result == "" then
-    return nil
+    return nil, nil
   end
+
   -- Remove trailing newline
   result = result:gsub("%s+$", "")
-  -- Extract repo name from URL
-  local repo = result:match("([^/:]+)%.git$")
-  return repo
+
+  -- Handle different GitHub URL formats:
+  -- SSH: git@github.com:org/repo.git
+  -- HTTPS: https://github.com/org/repo.git
+  local org, repo
+
+  -- Try SSH format first
+  org, repo = result:match("git@github%.com:([^/]+)/([^/]+)%.git$")
+
+  -- If SSH didn't match, try HTTPS format
+  if not org or not repo then
+    org, repo = result:match("https://github%.com/([^/]+)/([^/]+)%.git$")
+  end
+
+  -- If still no match, try without .git suffix
+  if not org or not repo then
+    org, repo = result:match("https://github%.com/([^/]+)/([^/]+)/?$")
+  end
+
+  return org, repo
 end
 
-
+-- Legacy function for backward compatibility
+local function get_repo_name()
+  local _, repo = get_repo_info()
+  return repo
+end
 
 return {
   fetch_github_repo = fetch_github_repo,
   get_repo_name = get_repo_name,
+  get_repo_info = get_repo_info,
 }
