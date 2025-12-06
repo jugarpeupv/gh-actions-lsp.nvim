@@ -2,10 +2,44 @@ local GithubAPI = require("gh-actions-lsp.api.github")
 
 local M = {}
 
+local get_gh_actions_init_options = function(workspace_path, session_token, fallback_org)
+  workspace_path = workspace_path or vim.fn.getcwd()
+  session_token = session_token or os.getenv("GHCRIO")
+  fallback_org = fallback_org
+
+  local org, repo_name = GithubAPI.get_repo_info()
+
+  -- If we couldn't infer the org from git remote, try using fallback
+  if not org and fallback_org then
+    org = fallback_org
+    -- Still need repo name, try to get it from git remote
+    repo_name = GithubAPI.get_repo_name()
+  end
+
+  if not org or not repo_name then
+    print("Could not determine repository info from git remote. You can pass a fallback org via setup options.")
+    return {
+      sessionToken = session_token,
+      repos = {},
+    }
+  end
+
+  local repo_info = GithubAPI.fetch_github_repo(repo_name, session_token, org, workspace_path)
+  return {
+    sessionToken = session_token,
+    repos = {
+      repo_info,
+    },
+  }
+end
+
 local lsp_config = {
   cmd = { "gh-actions-language-server", "--stdio" },
   filetypes = { "yaml.github" },
-  init_options = get_gh_actions_init_options(nil, nil, opts.fallback_org),
+  init_options = {
+    sessionToken = os.getenv("GHCRIO"),
+    repos = {},
+  },
   single_file_support = true,
   -- `root_dir` ensures that the LSP does not attach to all yaml files
   root_dir = function(bufnr, on_dir)
@@ -39,37 +73,6 @@ local lsp_config = {
   },
 }
 
-local get_gh_actions_init_options = function(workspace_path, session_token, fallback_org)
-  workspace_path = workspace_path or vim.fn.getcwd()
-  session_token = session_token or os.getenv("GHCRIO")
-  fallback_org = fallback_org
-
-  local org, repo_name = GithubAPI.get_repo_info()
-
-  -- If we couldn't infer the org from git remote, try using fallback
-  if not org and fallback_org then
-    org = fallback_org
-    -- Still need repo name, try to get it from git remote
-    repo_name = GithubAPI.get_repo_name()
-  end
-
-  if not org or not repo_name then
-    print("Could not determine repository info from git remote. You can pass a fallback org via setup options.")
-    return {
-      sessionToken = session_token,
-      repos = {},
-    }
-  end
-
-  local repo_info = GithubAPI.fetch_github_repo(repo_name, session_token, org, workspace_path)
-  return {
-    sessionToken = session_token,
-    repos = {
-      repo_info,
-    },
-  }
-end
-
 function M.setup(opts)
   opts = opts or {}
 
@@ -82,6 +85,20 @@ function M.setup(opts)
   if vim.lsp.config then
     vim.lsp.config["gh_actions"] = lsp_config
     vim.lsp.enable({ "gh_actions" })
+
+    -- Fetch repo info async and update running clients
+    vim.schedule(function()
+      local init_opts = get_gh_actions_init_options(opts.workspace_path, opts.session_token, opts.fallback_org)
+
+      -- Update the config for future clients
+      lsp_config.init_options = init_opts
+
+      -- Notify any already-running clients with workspace/didChangeConfiguration
+      for _, client in ipairs(vim.lsp.get_clients({ name = "gh_actions" })) do
+        client.config.init_options = init_opts
+        client.notify("workspace/didChangeConfiguration", { settings = init_opts })
+      end
+    end)
   end
 end
 
