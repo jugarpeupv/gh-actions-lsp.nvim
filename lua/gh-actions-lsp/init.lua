@@ -33,6 +33,46 @@ local get_gh_actions_init_options = function(workspace_path, session_token, fall
   }
 end
 
+local lsp_config = {
+  cmd = { "gh-actions-language-server", "--stdio" },
+  filetypes = { "yaml.github" },
+  init_options = {
+    sessionToken = os.getenv("GHCRIO"),
+    repos = {},
+  },
+  single_file_support = true,
+  -- `root_dir` ensures that the LSP does not attach to all yaml files
+  root_dir = function(bufnr, on_dir)
+    local parent = vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr))
+    if vim.endswith(parent, "/.github/workflows") then
+      on_dir(parent)
+    end
+  end,
+  handlers = {
+    ["actions/readFile"] = function(_, result)
+      if type(result.path) ~= "string" then
+        return nil, { code = -32602, message = "Invalid path parameter" }
+      end
+      local file_path = vim.uri_to_fname(result.path)
+      if vim.fn.filereadable(file_path) == 1 then
+        local f = assert(io.open(file_path, "r"))
+        local text = f:read("*a")
+        f:close()
+        return text, nil
+      else
+        return nil, { code = -32603, message = "File not found: " .. file_path }
+      end
+    end,
+  },
+  capabilities = {
+    workspace = {
+      didChangeWorkspaceFolders = {
+        dynamicRegistration = true,
+      },
+    },
+  },
+}
+
 function M.setup(opts)
   opts = opts or {}
 
@@ -42,44 +82,24 @@ function M.setup(opts)
     },
   })
 
-  vim.lsp.config["gh_actions"] = {
-    cmd = { "gh-actions-language-server", "--stdio" },
-    filetypes = { "yaml.github" },
-    init_options = get_gh_actions_init_options(nil, nil, opts.fallback_org),
-    single_file_support = true,
-    -- `root_dir` ensures that the LSP does not attach to all yaml files
-    root_dir = function(bufnr, on_dir)
-      local parent = vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr))
-      if vim.endswith(parent, "/.github/workflows") then
-        on_dir(parent)
-      end
-    end,
-    handlers = {
-      ["actions/readFile"] = function(_, result)
-        if type(result.path) ~= "string" then
-          return nil, { code = -32602, message = "Invalid path parameter" }
-        end
-        local file_path = vim.uri_to_fname(result.path)
-        if vim.fn.filereadable(file_path) == 1 then
-          local f = assert(io.open(file_path, "r"))
-          local text = f:read("*a")
-          f:close()
-          return text, nil
-        else
-          return nil, { code = -32603, message = "File not found: " .. file_path }
-        end
-      end,
-    },
-    capabilities = {
-      workspace = {
-        didChangeWorkspaceFolders = {
-          dynamicRegistration = true,
-        },
-      },
-    },
-  }
+  if vim.lsp.config then
+    vim.lsp.config["gh_actions"] = lsp_config
+    vim.lsp.enable({ "gh_actions" })
 
-  vim.lsp.enable({ "gh_actions" })
+    -- Fetch repo info async and update running clients
+    vim.schedule(function()
+      local init_opts = get_gh_actions_init_options(opts.workspace_path, opts.session_token, opts.fallback_org)
+
+      -- Update the config for future clients
+      lsp_config.init_options = init_opts
+
+      -- Notify any already-running clients with workspace/didChangeConfiguration
+      for _, client in ipairs(vim.lsp.get_clients({ name = "gh_actions" })) do
+        client.config.init_options = init_opts
+        client.notify("workspace/didChangeConfiguration", { settings = init_opts })
+      end
+    end)
+  end
 end
 
 return M
