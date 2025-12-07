@@ -4,7 +4,7 @@ local M = {}
 
 local get_gh_actions_init_options = function(workspace_path, session_token, fallback_org)
   workspace_path = workspace_path or vim.fn.getcwd()
-  session_token = session_token or os.getenv("GHCRIO")
+  session_token = session_token or os.getenv("GH_ACTIONS_PAT")
   fallback_org = fallback_org
 
   local org, repo_name = GithubAPI.get_repo_info()
