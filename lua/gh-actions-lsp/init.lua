@@ -17,7 +17,7 @@ local get_gh_actions_init_options = function(workspace_path, session_token, fall
   end
 
   if not org or not repo_name then
-    print("Could not determine repository info from git remote. You can pass a fallback org via setup options.")
+    -- print("Could not determine repository info from git remote. You can pass a fallback org via setup options.")
     return {
       sessionToken = session_token,
       repos = {},

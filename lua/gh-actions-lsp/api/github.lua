@@ -60,12 +60,12 @@ local function get_repo_info()
   result = result:gsub("%s+$", "")
 
   -- Handle different GitHub URL formats:
-  -- SSH: git@github.com:org/repo.git
+  -- SSH: git@github.com:org/repo.git or git@github.com-alias:org/repo.git
   -- HTTPS: https://github.com/org/repo.git
   local org, repo
 
-  -- Try SSH format first
-  org, repo = result:match("git@github%.com:([^/]+)/([^/]+)%.git$")
+  -- Try SSH format first (supports aliases like github.com-personal)
+  org, repo = result:match("git@github%.com[^:]*:([^/]+)/([^/]+)%.git$")
 
   -- If SSH didn't match, try HTTPS format
   if not org or not repo then
