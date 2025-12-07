@@ -34,7 +34,7 @@ local get_gh_actions_init_options = function(workspace_path, session_token, fall
 end
 
 local lsp_config = {
-  cmd = { "gh-actions-language-server", "--stdio" },
+	cmd = { os.getenv("HOME") .. "/.local/share/nvim/mason/bin/gh-actions-language-server", "--stdio" },
   filetypes = { "yaml.github" },
   init_options = {
     sessionToken = os.getenv("GHCRIO"),
