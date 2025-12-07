@@ -34,7 +34,7 @@ local get_gh_actions_init_options = function(workspace_path, session_token, fall
 end
 
 local lsp_config = {
-	cmd = { os.getenv("HOME") .. "/.local/share/nvim/mason/bin/gh-actions-language-server", "--stdio" },
+  cmd = { os.getenv("HOME") .. "/.local/share/nvim/mason/bin/gh-actions-language-server", "--stdio" },
   filetypes = { "yaml.github" },
   init_options = {
     sessionToken = os.getenv("GHCRIO"),
@@ -99,6 +99,19 @@ function M.setup(opts)
         client.notify("workspace/didChangeConfiguration", { settings = init_opts })
       end
     end)
+
+    -- vim.defer_fn(function()
+    --   local init_opts = get_gh_actions_init_options(opts.workspace_path, opts.session_token, opts.fallback_org)
+    --
+    --   -- Update the config for future clients
+    --   lsp_config.init_options = init_opts
+    --
+    --   -- Notify any already-running clients with workspace/didChangeConfiguration
+    --   for _, client in ipairs(vim.lsp.get_clients({ name = "gh_actions" })) do
+    --     client.config.init_options = init_opts
+    --     client.notify("workspace/didChangeConfiguration", { settings = init_opts })
+    --   end
+    -- end, 5000)
   end
 end
 

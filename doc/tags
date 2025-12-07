@@ -1,5 +1,6 @@
-my-template-docs-a-neovim-plugin-template	my-template-docs.txt	/*my-template-docs-a-neovim-plugin-template*
-my-template-docs-a-neovim-plugin-template-using-it	my-template-docs.txt	/*my-template-docs-a-neovim-plugin-template-using-it*
+my-template-docs-gh-actions-lsp.nvim	my-template-docs.txt	/*my-template-docs-gh-actions-lsp.nvim*
+my-template-docs-gh-actions-lsp.nvim-installation	my-template-docs.txt	/*my-template-docs-gh-actions-lsp.nvim-installation*
+my-template-docs-gh-actions-lsp.nvim-prerequisites	my-template-docs.txt	/*my-template-docs-gh-actions-lsp.nvim-prerequisites*
 my-template-docs-links	my-template-docs.txt	/*my-template-docs-links*
 my-template-docs-table-of-contents	my-template-docs.txt	/*my-template-docs-table-of-contents*
 my-template-docs.txt	my-template-docs.txt	/*my-template-docs.txt*
